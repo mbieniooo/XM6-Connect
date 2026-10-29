@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in XM6-Connect does not work as described in the README.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: Output of `sw_vers -productVersion`.
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Headphone firmware version
+      description: Shown in Sony's phone app under device information, if you know it.
+  - type: input
+    id: commit
+    attributes:
+      label: XM6-Connect commit
+      description: Output of `git rev-parse --short HEAD` in the folder you built from.
+    validations:
+      required: true
+  - type: dropdown
+    id: signing
+    attributes:
+      label: Code signing
+      options:
+        - Ad hoc (the default)
+        - My own identity (CODESIGN_IDENTITY)
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: Agent status
+      description: Output of `.build/release/xm6ctl status --json`. Remove Bluetooth addresses before posting.
+      render: json
+  - type: textarea
+    id: log
+    attributes:
+      label: Protocol log excerpt
+      description: Optional. See "Reporting a protocol problem" in the README. Remove Bluetooth addresses and device names before posting.
+      render: text

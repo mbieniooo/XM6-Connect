@@ -1,0 +1,37 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Package.swift targets macOS 26, which needs the macOS 26 SDK. The macos-26 (Apple
+    # silicon) image ships Xcode 26 as its default; macos-latest currently points at it too,
+    # but it is pinned here so a future relabel cannot silently change the SDK.
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcode-select -p
+          swift --version
+          xcrun --show-sdk-version
+
+      - name: Tests
+        run: |
+          set -o pipefail
+          bash scripts/run_tests.sh 2>&1 | tee test-output.txt
+          if ! grep -Eq '^TOTAL [0-9]+ FAIL 0$' test-output.txt; then
+            echo "::error::test summary line 'TOTAL <n> FAIL 0' not found"
+            grep -E '^(FAIL|TOTAL)' test-output.txt || true
+            exit 1
+          fi
+
+      - name: Release build
+        run: swift build -c release
