@@ -301,6 +301,16 @@ func testPopoverMultipointRowsMarkOnePlaybackAndDisableDisconnected() -> Bool {
     return !model.actionIsTakingTime
 }
 
+/// Waits for a value the model reaches on a main-queue timer, instead of sleeping for a
+/// fixed time. The ambient slider debounces its write by 0.15 s and the wait indicator
+/// appears 0.4 s after the write, so a 0.6 s sleep left only 0.05 s of slack and lost the
+/// race on a loaded machine.
+@MainActor func waitUntil(timeout: TimeInterval = 3, condition: () -> Bool) async -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while !condition() && Date() < deadline { try? await Task.sleep(nanoseconds: 10_000_000) }
+    return condition()
+}
+
 @MainActor func testPendingEditsHoldUntilTheHeadsetReportsThem() async -> Bool {
     let t0 = Date(timeIntervalSince1970: 1_000), t1 = Date(timeIntervalSince1970: 1_001), t2 = Date(timeIntervalSince1970: 1_002)
     func state(_ date: Date) -> AppState {
@@ -320,8 +330,7 @@ func testPopoverMultipointRowsMarkOnePlaybackAndDisableDisconnected() -> Bool {
         edit(model)
         model.handle(AppReply(state: initial, stale: true), for: .setMode(.ambient))
         guard holds(model.viewState) else { print("    P1 \(name): stale reply replaced the local value"); return false }
-        try? await Task.sleep(nanoseconds: 600_000_000)
-        guard model.actionIsTakingTime else { print("    P1 \(name): stale reply ended the action wait"); return false }
+        guard await waitUntil(condition: { model.actionIsTakingTime }) else { print("    P1 \(name): stale reply ended the action wait"); return false }
         model.handle(AppReply(state: state(t1)), for: .status)
         guard holds(model.viewState) else { print("    P1 \(name): old headset report replaced the local value"); return false }
         var resolved = state(t2); report(&resolved)
@@ -336,8 +345,7 @@ func testPopoverMultipointRowsMarkOnePlaybackAndDisableDisconnected() -> Bool {
     let failed = PopoverModel(pendingWriteCap: 0.3); failed.apply(AppReply(state: state)); failed.selectMode(.nc)
     failed.handle(AppReply(state: AppState(connectionStatus: "failed", ambient: state.ambient, stateAsOf: Date(timeIntervalSince1970: 2_001))), for: .setMode(.nc))
     guard failed.viewState.mode == .nc, failed.viewState.connection != .connected else { print("    P2: failed reply dropped the pending edit"); return false }
-    try? await Task.sleep(nanoseconds: 500_000_000)
-    guard failed.viewState.mode == .ambient, !failed.actionIsTakingTime else { print("    P2: cap did not end the edit kept across a failed reply"); return false }
+    guard await waitUntil(condition: { failed.viewState.mode == .ambient && !failed.actionIsTakingTime }) else { print("    P2: cap did not end the edit kept across a failed reply"); return false }
     let rejected = PopoverModel(pendingWriteCap: 0.3); rejected.apply(AppReply(state: state)); rejected.selectMode(.nc)
     rejected.handle(AppReply(state: state, error: "rejected command"), for: .setMode(.nc))
     guard rejected.viewState.mode == .ambient, rejected.viewState.commandError == "rejected command", !rejected.actionIsTakingTime else { print("    P2: error reply did not end pending edits"); return false }
@@ -345,8 +353,7 @@ func testPopoverMultipointRowsMarkOnePlaybackAndDisableDisconnected() -> Bool {
     try? await Task.sleep(nanoseconds: 500_000_000)
     guard lost.viewState.placeholderTitle == "Agent not running", !lost.actionIsTakingTime else { print("    P2: socket loss cap changed the error view"); return false }
     let capped = PopoverModel(pendingWriteCap: 0.3); capped.apply(AppReply(state: state)); capped.selectMode(.nc)
-    try? await Task.sleep(nanoseconds: 500_000_000)
-    guard capped.viewState.mode == .ambient, !capped.actionIsTakingTime else { print("    P2: pending-write cap did not restore the last snapshot"); return false }
+    guard await waitUntil(condition: { capped.viewState.mode == .ambient && !capped.actionIsTakingTime }) else { print("    P2: pending-write cap did not restore the last snapshot"); return false }
     return true
 }
 
@@ -356,9 +363,10 @@ func testPopoverMultipointRowsMarkOnePlaybackAndDisableDisconnected() -> Bool {
     let model = PopoverModel(); var commands: [AppCommand] = []; model.onCommand = { commands.append($0) }
     model.apply(AppReply(state: AppState(connectionStatus: "connected", equalizer: AppEqualizer(presetCode: Int(EqualizerPreset.custom.rawValue), bands: Array(repeating: 0, count: 10), subtype: 4), stateAsOf: t0)))
     model.editBand(0, value: 5); model.selectPreset(.heavy)
-    try? await Task.sleep(nanoseconds: 600_000_000)
+    // The wait appears 0.4 s after the preset write, which is past the band debounce,
+    // so by the time it is true a stray band write would already have been sent.
+    guard await waitUntil(condition: { model.actionIsTakingTime }) else { print("    FIX1: the preset write showed no wait"); return false }
     guard commands == [.setEQPreset(Int(EqualizerPreset.heavy.rawValue))] else { print("    FIX1: a band write was sent after the preset: \(commands)"); return false }
-    guard model.actionIsTakingTime else { print("    FIX1: the preset write showed no wait"); return false }
     model.handle(AppReply(state: AppState(connectionStatus: "connected", equalizer: AppEqualizer(presetCode: Int(EqualizerPreset.heavy.rawValue), bands: heavyBands, subtype: 4), stateAsOf: t1)), for: .status)
     guard model.viewState.preset == .heavy, model.viewState.bands == heavyBands, !model.actionIsTakingTime else { print("    FIX1: the Heavy report did not resolve the preset over the band edit"); return false }
     let later = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
