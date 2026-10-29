@@ -15,9 +15,10 @@ Sony's app can use them as usual.
   <img src="docs/images/equalizer-presets.png" alt="Choosing an equalizer preset: Off, Game, Heavy, Clear, Hard, Soft or Custom, with the band sliders below" width="300">
 </p>
 <p align="center">
-  <img src="docs/images/widget-medium.png" alt="The medium desktop widget: battery, noise control and equalizer presets" width="330">
-  &nbsp;
-  <img src="docs/images/widget-small.png" alt="The small desktop widget: battery and the three noise-control modes" width="155">
+  <img src="docs/images/widget-medium.png" alt="The medium desktop widget: battery, noise control and equalizer presets" width="360">
+</p>
+<p align="center">
+  <img src="docs/images/widget-small.png" alt="The small desktop widget: battery and the three noise-control modes" width="180">
 </p>
 
 ## Features
