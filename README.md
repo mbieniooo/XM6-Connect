@@ -10,12 +10,14 @@ Sony's app can use them as usual.
 > XM6-Connect is an independent project. Sony does not make, endorse or support it.
 
 <p align="center">
-  <img src="docs/images/popover.png" alt="The menu-bar popover: noise control, listening mode, battery, equalizer and speak-to-chat" width="320">
+  <img src="docs/images/popover.png" alt="The menu-bar popover: noise control, listening mode, battery, equalizer and speak-to-chat" width="300">
+  &nbsp;
+  <img src="docs/images/equalizer-presets.png" alt="Choosing an equalizer preset: Off, Game, Heavy, Clear, Hard, Soft or Custom, with the band sliders below" width="300">
 </p>
 <p align="center">
   <img src="docs/images/widget-medium.png" alt="The medium desktop widget: battery, noise control and equalizer presets" width="330">
   &nbsp;
-  <img src="docs/images/widget-small.png" alt="The small desktop widget: battery and the three noise-control modes" width="150">
+  <img src="docs/images/widget-small.png" alt="The small desktop widget: battery and the three noise-control modes" width="155">
 </p>
 
 ## Features
